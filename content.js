@@ -1,82 +1,98 @@
-let previewElement, longClickTimer, options;
+let previewElement, previewTimer, options;
 
 chrome.storage.sync.get({
-  triggerMethod: 'hover',
-  longClickDuration: 500,
-  theme: 'light'
+  enabled: true,
+  previewDelay: 500,
+  previewSize: 'medium',
+  previewPosition: 'smart'
 }, function(items) {
   options = items;
-  document.body.classList.add(options.theme);
 });
 
-function showPreview(target, x, y) {
+function createPreviewElement(target, x, y) {
   if (previewElement) previewElement.remove();
   
   previewElement = document.createElement('div');
-  previewElement.className = 'link-preview';
-  previewElement.innerHTML = `
-    <h3>${target.textContent}</h3>
-    <p>Loading preview...</p>
-    <button class="reader-view-btn">Reader View</button>
-  `;
-  
+  previewElement.className = `link-preview ${options.previewSize}`;
   document.body.appendChild(previewElement);
   
-  previewElement.style.left = `${x + 10}px`;
-  previewElement.style.top = `${y + 10}px`;
+  positionPreview(x, y);
+  
+  if (target.href) {
+    previewLink(target);
+  } else if (target.src) {
+    previewImage(target);
+  }
+}
+
+function positionPreview(x, y) {
+  const rect = previewElement.getBoundingClientRect();
+  let left = x + 10;
+  let top = y + 10;
+  
+  if (options.previewPosition === 'smart') {
+    if (left + rect.width > window.innerWidth) {
+      left = window.innerWidth - rect.width - 10;
+    }
+    if (top + rect.height > window.innerHeight) {
+      top = window.innerHeight - rect.height - 10;
+    }
+  }
+  
+  previewElement.style.left = `${left}px`;
+  previewElement.style.top = `${top}px`;
+}
+
+function previewLink(target) {
+  previewElement.innerHTML = '<p>Loading preview...</p>';
   
   fetch(target.href)
     .then(response => response.text())
     .then(html => {
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
-      const title = doc.querySelector('title').textContent;
-      const description = doc.querySelector('meta[name="description"]')?.content || 'No description available';
+      const title = doc.querySelector('title')?.textContent || 'No title';
+      const description = doc.querySelector('meta[name="description"]')?.content || 
+                          doc.querySelector('p')?.textContent?.slice(0, 150) + '...' || 
+                          'No description available';
+      const favicon = doc.querySelector('link[rel="icon"]')?.href || 
+                      doc.querySelector('link[rel="shortcut icon"]')?.href ||
+                      new URL('/favicon.ico', target.href).href;
       
-      previewElement.innerHTML = `
-        <h3>${title}</h3>
-        <p>${description}</p>
-        <button class="reader-view-btn">Reader View</button>
+      let content = `
+        <div class="link-preview-title">
+          <img src="${favicon}" alt="" class="link-preview-favicon" width="16" height="16">
+          ${title}
+        </div>
+        <p class="link-preview-description">${description}</p>
       `;
-      
-      previewElement.querySelector('.reader-view-btn').addEventListener('click', () => showReaderView(doc));
+      previewElement.innerHTML = content;
     })
     .catch(error => {
-      previewElement.innerHTML = `
-        <h3>Error</h3>
-        <p>Could not load preview</p>
-      `;
+      previewElement.innerHTML = '<p>Error loading preview</p>';
+      console.error('Error fetching preview:', error);
     });
 }
 
-function showReaderView(doc) {
-  const article = new Readability(doc).parse();
-  previewElement.innerHTML = `
-    <h1>${article.title}</h1>
-    <div>${article.content}</div>
-  `;
+function previewImage(target) {
+  previewElement.innerHTML = `<img src="${target.src}" alt="Image preview" class="link-preview-image">`;
 }
 
 document.addEventListener('mouseover', function(event) {
-  if (options.triggerMethod === 'hover') {
-    const target = event.target;
-    if (target.tagName === 'A' && target.href) {
-      showPreview(target, event.pageX, event.pageY);
-    }
+  const target = event.target.closest('a') || (event.target.tagName === 'IMG' ? event.target : null);
+  if (target && options.enabled) {
+    previewTimer = setTimeout(() => {
+      createPreviewElement(target, event.pageX, event.pageY);
+    }, options.previewDelay);
   }
 });
 
-document.addEventListener('mousedown', function(event) {
-  if (options.triggerMethod === 'longClick') {
-    const target = event.target;
-    if (target.tagName === 'A' && target.href) {
-      longClickTimer = setTimeout(() => {
-        showPreview(target, event.pageX, event.pageY);
-      }, options.longClickDuration);
-    }
+document.addEventListener('mouseout', function() {
+  if (previewTimer) {
+    clearTimeout(previewTimer);
   }
-});
-
-document.addEventListener('mouseup', function() {
-  clearTimeout(longClickTimer);
+  if (previewElement) {
+    previewElement.remove();
+    previewElement = null;
+  }
 });
