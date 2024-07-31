@@ -1,22 +1,24 @@
 document.addEventListener('DOMContentLoaded', function() {
-  const triggerMethod = document.getElementById('triggerMethod');
-  const longClickDuration = document.getElementById('longClickDuration');
-  const theme = document.getElementById('theme');
-  const saveButton = document.getElementById('save');
-
-  chrome.storage.sync.get(['triggerMethod', 'longClickDuration', 'theme'], function(items) {
-    triggerMethod.value = items.triggerMethod;
-    longClickDuration.value = items.longClickDuration;
-    theme.value = items.theme;
+  chrome.storage.sync.get({
+    enabled: true,
+    previewDelay: 500,
+    previewSize: 'medium',
+    previewPosition: 'smart'
+  }, function(items) {
+    document.getElementById('enabled').checked = items.enabled;
+    document.getElementById('previewDelay').value = items.previewDelay;
+    document.getElementById('previewSize').value = items.previewSize;
+    document.getElementById('previewPosition').value = items.previewPosition;
   });
+});
 
-  saveButton.addEventListener('click', function() {
-    chrome.storage.sync.set({
-      triggerMethod: triggerMethod.value,
-      longClickDuration: parseInt(longClickDuration.value),
-      theme: theme.value
-    }, function() {
-      alert('Options saved');
-    });
+document.getElementById('save').addEventListener('click', function() {
+  chrome.storage.sync.set({
+    enabled: document.getElementById('enabled').checked,
+    previewDelay: parseInt(document.getElementById('previewDelay').value),
+    previewSize: document.getElementById('previewSize').value,
+    previewPosition: document.getElementById('previewPosition').value
+  }, function() {
+    alert('Options saved');
   });
 });
