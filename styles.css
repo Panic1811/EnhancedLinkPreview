@@ -1,0 +1,18 @@
+.link-preview {
+  position: absolute;
+  background: white;
+  border: 1px solid #ccc;
+  padding: 10px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  z-index: 10000;
+}
+
+body.light .link-preview {
+  background: white;
+  color: black;
+}
+
+body.dark .link-preview {
+  background: black;
+  color: white;
+}
