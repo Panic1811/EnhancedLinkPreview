@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "Enhanced Link Preview",
+  "version": "1.1",
+  "description": "Preview links with customizable triggers and reader view",
+  "permissions": ["activeTab", "storage"],
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "css": ["styles.css"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "options_page": "options.html"
+}
